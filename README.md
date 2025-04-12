@@ -1,4 +1,4 @@
-# EchoWizard Backend 🪄🎶
+# EchoWizard Backend 🧙‍♂️
 
 The backend service for **EchoWizard**, an AI-powered tool that transcribes and comprehends audio files (including YouTube videos), then generates intelligent summaries and answers questions with precise timestamps.
 
