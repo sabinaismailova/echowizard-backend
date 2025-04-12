@@ -14,8 +14,10 @@ import {
   uploadToAssemblyAI,
   startTranscription,
   pollTranscription,
+  getSentences,
   formatTime,
 } from "./helpers/assembly.js";
+import { downloadYoutubeAsMp3 } from "./helpers/downloadYoutube.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,12 +39,20 @@ app.use(express.json());
 //POST - generate and return the summary of the contents of audio file
 app.post("/summarize-upload", upload.single("audio"), async (req, res) => {
   try {
-    const filePath = path.join(__dirname, req.file.path);
+    const { youtubeUrl } = req.body;
+    let filePath;
     const mimeType = "audio/mpeg";
+
+    if (youtubeUrl) {
+      filePath = await downloadYoutubeAsMp3(youtubeUrl);
+    } else {
+      filePath = path.join(__dirname, req.file.path);
+    }
 
     const uploadUrl = await uploadToAssemblyAI(filePath);
     const transcriptId = await startTranscription(uploadUrl);
     const transcript = await pollTranscription(transcriptId);
+    const sentences = await getSentences(transcriptId);
 
     const uploadedFile = await gemini.files.upload({
       file: filePath,
@@ -51,7 +61,7 @@ app.post("/summarize-upload", upload.single("audio"), async (req, res) => {
       },
     });
 
-    const structuredTranscript = transcript.utterances
+    const structuredTranscript = sentences
       .map(
         (u) =>
           `[${formatTime(u.start)} - ${formatTime(u.end)}] ${u.speaker}: ${
@@ -61,14 +71,24 @@ app.post("/summarize-upload", upload.single("audio"), async (req, res) => {
       .join("\n");
 
     const prompt = `
-      You are a helpful assistant. 
+      You are a helpful assistant.
+      
       Please generate a summary of the contents of the audio with accurate time references (e.g., [00:05 - 00:10]) for where you got your information from.
+      
       Use the audio's timestamped transcript below to get accurate timestamps. The time references should be at the end of sentences like how citing is done on a research paper.
       
-      Transcript:
-      ${structuredTranscript}
-      
-      `;
+      Transcript: ${structuredTranscript}
+
+      Please return the summary in this structure: 
+
+      Key Topics Covered: (a list of all the topics that were covered in the audio)
+
+      Summary: (the summary of the contents of the audio)
+
+      Action Items: (only include this if there are any action items based on the audio content)
+
+      Suggested Follow-up Questions: (any follow questions that would help the user based on the audio content)
+    `;
 
     const response = await gemini.models.generateContent({
       model: "gemini-2.0-flash",
@@ -98,7 +118,7 @@ app.post("/summarize-upload", upload.single("audio"), async (req, res) => {
 //POST - generate answers to any questions user asks about the audio
 app.post("/answer", upload.none(), async (req, res) => {
   try {
-    const { fileUri, mimeType, question } = req.body;
+    const { fileUri, transcript, mimeType, question } = req.body;
 
     if (!fileUri || !mimeType || !question) {
       return res.status(400).json({
@@ -106,14 +126,20 @@ app.post("/answer", upload.none(), async (req, res) => {
       });
     }
 
-    const prompt = `You are a helpful assistant. Please answer the user’s question based solely on the audio file.
+    const prompt = `
+      You are a helpful assistant. 
+    
+      Please answer the user’s question based on the content of the audio file with accurate time references (e.g., [00:05 - 00:10]) for where you got your information from.
 
-    If you can identify *exactly when* the answer is mentioned in the audio, include timestamps (e.g. [00:01:23]).
+      Use the audio's timestamped transcript below to get accurate timestamps. The time references should be at the end of sentences like how citing is done on a research paper.
+      
+      Here is the transcript: ${transcript}
     
-    If you are unsure about the exact timing, do not include timestamps at all. Do not guess.
-    
-    Here is the question: ${question}
+      Here is the question: ${question}
+
+      If the question cannot be answered with the contents of the audio, then let the user know and provide a short answer to the question while specifying that the answer is not based on the audio. 
     `;
+    
     const response = await gemini.models.generateContent({
       model: "gemini-2.0-flash",
       contents: createUserContent([

@@ -52,6 +52,18 @@ export const pollTranscription = async (transcriptId) => {
   }
 };
 
+export const getSentences = async (transcriptId) => {
+  const res = await axios.get(
+    `https://api.assemblyai.com/v2/transcript/${transcriptId}/sentences`,
+    {
+      headers: {
+        authorization: process.env.ASSEMBLYAI_API_KEY,
+      },
+    }
+  );
+  return res.data.sentences;
+};
+
 export const formatTime = (ms) => {
   const totalSec = Math.floor(ms / 1000);
   const h = Math.floor(totalSec / 3600);
