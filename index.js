@@ -10,6 +10,12 @@ import multer from "multer";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import path from "path";
+import {
+  uploadToAssemblyAI,
+  startTranscription,
+  pollTranscription,
+  formatTime,
+} from "./helpers/assembly.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,6 +40,10 @@ app.post("/summarize-upload", upload.single("audio"), async (req, res) => {
     const filePath = path.join(__dirname, req.file.path);
     const mimeType = "audio/mpeg";
 
+    const uploadUrl = await uploadToAssemblyAI(filePath);
+    const transcriptId = await startTranscription(uploadUrl);
+    const transcript = await pollTranscription(transcriptId);
+
     const uploadedFile = await gemini.files.upload({
       file: filePath,
       config: {
@@ -41,14 +51,23 @@ app.post("/summarize-upload", upload.single("audio"), async (req, res) => {
       },
     });
 
+    const structuredTranscript = transcript.utterances
+      .map(
+        (u) =>
+          `[${formatTime(u.start)} - ${formatTime(u.end)}] ${u.speaker}: ${
+            u.text
+          }`
+      )
+      .join("\n");
+
     const prompt = `
-    You are a helpful assistant. Please summarize the contents of the audio file with the following structure : 
-        
-    Summary with sections: 
-    🧠 Key Takeaways 
-    ✅ Action Items 
-    🤖 Suggested Follow-up Questions
-    
+      You are a helpful assistant. 
+      Please generate a summary of the contents of the audio with accurate time references (e.g., [00:05 - 00:10]) for where you got your information from.
+      Use the audio's timestamped transcript below to get accurate timestamps. The time references should be at the end of sentences like how citing is done on a research paper.
+      
+      Transcript:
+      ${structuredTranscript}
+      
       `;
 
     const response = await gemini.models.generateContent({
@@ -65,6 +84,7 @@ app.post("/summarize-upload", upload.single("audio"), async (req, res) => {
       summary: response.text,
       fileUri: uploadedFile.uri,
       mimeType,
+      transcript: structuredTranscript,
     });
   } catch (err) {
     console.error("Error processing audio:", err);
@@ -86,7 +106,14 @@ app.post("/answer", upload.none(), async (req, res) => {
       });
     }
 
-    const prompt = `You are a helpful assistant. Please refer to the contents of the audio file to answer the user's question: ${question}`;
+    const prompt = `You are a helpful assistant. Please answer the user’s question based solely on the audio file.
+
+    If you can identify *exactly when* the answer is mentioned in the audio, include timestamps (e.g. [00:01:23]).
+    
+    If you are unsure about the exact timing, do not include timestamps at all. Do not guess.
+    
+    Here is the question: ${question}
+    `;
     const response = await gemini.models.generateContent({
       model: "gemini-2.0-flash",
       contents: createUserContent([
