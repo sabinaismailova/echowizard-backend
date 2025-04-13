@@ -16,8 +16,8 @@ import {
   pollTranscription,
   getSentences,
   formatTime,
-} from "./helpers/assembly.js";
-import { downloadYoutubeAsMp3 } from "./helpers/downloadYoutube.js";
+} from "../helpers/assembly.js";
+import { downloadYoutubeAsMp3 } from "../helpers/downloadYoutube.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
