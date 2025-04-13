@@ -33,25 +33,15 @@ const gemini = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
-app.use(cors());
 app.use(express.json());
 
-const allowedOrigins = ["https://echowizard-frontend.vercel.app"];
+app.use((req, res, next) => {
+	res.setHeader("Access-Control-Allow-Origin", "*")
+	res.setHeader("Access-Control-Allow-Methods", "*")		
+	res.setHeader("Access-Control-Allow-Headers", "*")
+})
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) === -1) {
-        const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
-        return callback(new Error(msg), false);
-      }
-      return callback(null, true);
-    },
-    credentials: true,
-  })
-);
+app.use(cors());
 
 //POST - generate and return the summary of the contents of audio file
 app.post("/summarize-upload", upload.single("audio"), async (req, res) => {
