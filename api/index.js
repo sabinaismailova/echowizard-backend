@@ -35,13 +35,7 @@ const gemini = new GoogleGenAI({
 
 app.use(express.json());
 
-app.use((req, res, next) => {
-	res.setHeader("Access-Control-Allow-Origin", "*")
-	res.setHeader("Access-Control-Allow-Methods", "*")		
-	res.setHeader("Access-Control-Allow-Headers", "*")
-})
-
-app.use(cors());
+app.use(cors({ origin: '*' }));
 
 //POST - generate and return the summary of the contents of audio file
 app.post("/summarize-upload", upload.single("audio"), async (req, res) => {
@@ -166,6 +160,8 @@ app.post("/answer", upload.none(), async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+// app.listen(PORT, () => {
+//   console.log(`Server running at http://localhost:${PORT}`);
+// });
+
+export default app;
