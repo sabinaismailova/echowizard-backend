@@ -173,6 +173,5 @@ app.post("/answer", upload.none(), async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+export default app;
+
