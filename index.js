@@ -21,8 +21,12 @@ import { downloadYoutubeAsMp3 } from "./helpers/downloadYoutube.js";
 const app = express();
 const PORT = 5050;
 
+if (!fs.existsSync("/tmp")) {
+  fs.mkdirSync("/tmp");
+}
+
 const upload = multer({
-  dest: "tmp/",
+  dest: "/tmp/",
 });
 
 const gemini = new GoogleGenAI({
