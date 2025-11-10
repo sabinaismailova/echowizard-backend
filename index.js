@@ -8,7 +8,6 @@ import {
 import "dotenv/config";
 import multer from "multer";
 import fs from "fs";
-import { fileURLToPath } from "url";
 import path from "path";
 import {
   uploadToAssemblyAI,
@@ -19,14 +18,11 @@ import {
 } from "./helpers/assembly.js";
 import { downloadYoutubeAsMp3 } from "./helpers/downloadYoutube.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const app = express();
-const PORT = 3000;
+const PORT = 5050;
 
 const upload = multer({
-  dest: "uploads/",
+  dest: "tmp/",
 });
 
 const gemini = new GoogleGenAI({
@@ -36,6 +32,10 @@ const gemini = new GoogleGenAI({
 app.use(express.json());
 
 app.use(cors());
+
+app.get("/", (req, res) => {
+  res.send("Backend is running!")
+});
 
 //POST - generate and return the summary of the contents of audio file
 app.post("/summarize-upload", upload.single("audio"), async (req, res) => {
@@ -47,7 +47,7 @@ app.post("/summarize-upload", upload.single("audio"), async (req, res) => {
     if (youtubeUrl) {
       filePath = await downloadYoutubeAsMp3(youtubeUrl);
     } else {
-      filePath = path.join(__dirname, req.file.path);
+      filePath = path.join("/tmp", req.file.path);
     }
 
     const uploadUrl = await uploadToAssemblyAI(filePath);

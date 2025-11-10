@@ -99,7 +99,7 @@ Server will run at http://localhost:3000
 ├── helpers/
 │   ├── assembly.js          # Transcription logic
 │   └── downloadYoutube.js   # YouTube MP3 downloader
-├── uploads/                 # Temp audio files
+├── tmp/                # Temp audio files
 ├── .env                     # API keys (not committed)
 └── README.md
 ```

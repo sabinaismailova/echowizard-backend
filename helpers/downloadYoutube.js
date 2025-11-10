@@ -3,12 +3,10 @@ import { v4 as uuidv4 } from "uuid";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
 export const downloadYoutubeAsMp3 = (youtubeUrl) => {
   return new Promise((resolve, reject) => {
     const outputFilename = `${uuidv4()}.mp3`;
-    const outputPath = path.join(__dirname, "..", "uploads", outputFilename);
+    const outputPath = path.join("/tmp", outputFilename);
 
     const command = `yt-dlp -f bestaudio --extract-audio --audio-format mp3 -o "${outputPath}" "${youtubeUrl}"`;
 
